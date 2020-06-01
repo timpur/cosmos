@@ -1,1 +1,1 @@
-export { EcsService, EcsServiceProps } from './ecs';
+export { EcsService, EcsServiceProps } from './ecs-service';
