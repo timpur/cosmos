@@ -171,10 +171,12 @@ export class RemoteCluster {
       exportName: `${exportName}Name`,
       value: cluster.clusterName,
     });
-    new Output(scope, 'ClusterSecurityGroup', {
-      exportName: `${exportName}SecurityGroup`,
-      value: cluster.connections.securityGroups[0].securityGroupId,
-    });
+    if (cluster.connections.securityGroups.length) {
+      new Output(scope, 'ClusterSecurityGroup', {
+        exportName: `${exportName}SecurityGroup`,
+        value: cluster.connections.securityGroups[0].securityGroupId,
+      });
+    }
   }
 
   static import(scope: Construct, exportName: string, vpc: IVpc): ICluster {
