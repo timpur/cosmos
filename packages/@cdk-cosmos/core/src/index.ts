@@ -8,8 +8,9 @@ export { EcsSolarSystemCoreStack, EcsSolarSystemCoreProps, EcsSolarSystemExtensi
 
 export {
   CiCdSolarSystemCoreStack,
-  CiCdSolarSystemCoreStackProps,
   CiCdEcsSolarSystemCoreStack,
-  CiCdSolarSystemExtensionStackProps,
+  CiCdSolarSystemCoreStackProps,
   CiCdSolarSystemExtensionStack,
-} from './ci-cd-solar-system';
+  CiCdEcsSolarSystemExtensionStack,
+  CiCdSolarSystemExtensionStackProps,
+} from './cicd-solar-system';

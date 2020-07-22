@@ -4,14 +4,15 @@
 // Mocking modules
 class MockCloudFormation {
   listExports = () => ({
-    promise: () => ({
-      Exports: [
-        {
-          Name: 'test',
-          Value: 'test',
-        },
-      ],
-    }),
+    promise: () =>
+      Promise.resolve({
+        Exports: [
+          {
+            Name: 'test',
+            Value: 'test',
+          },
+        ],
+      }),
   });
 }
 
@@ -24,7 +25,7 @@ const mockRequest = () => ({
       write: jest.fn(arg => (body = JSON.parse(arg))),
       end: jest.fn(() => {
         request(body);
-        cb(Promise.resolve({ statusCode: 200, statusMessage: 'Mock' }));
+        Promise.resolve().then(() => cb({ statusCode: 200, statusMessage: 'Mock' }));
       }),
     };
   }),

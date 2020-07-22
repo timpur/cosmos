@@ -1,7 +1,8 @@
 import '@aws-cdk/assert/jest';
-import { App } from '@aws-cdk/core';
+import { App, Construct } from '@aws-cdk/core';
 import { synthesizeStacks, toHaveResourceId, toHaveResourceCount } from '../../../../src/test';
 import { CosmosCoreStack, CosmosExtensionStack } from '../src';
+import { CnameRecord } from '@aws-cdk/aws-route53';
 
 const app = new App();
 const cosmos = new CosmosCoreStack(app, 'Cos', { tld: 'cos.com', cidr: '10.0.0.0/24' });
@@ -11,7 +12,6 @@ const [cosmosStack, cosmosExtensionStack] = synthesizeStacks(cosmos, cosmosExten
 describe('Cosmos', () => {
   test('should be a cosmos', () => {
     expect(cosmosStack.name).toEqual('CoreCosCosmos');
-    expect(cosmosStack).toHaveOutput({ exportName: 'CoreId', outputValue: 'Cos' });
     expect(cosmosStack).toHaveOutput({ exportName: 'CoreLibVersion' });
     toHaveResourceCount(cosmosStack, 4);
   });
@@ -59,6 +59,19 @@ describe('Cosmos Extension', () => {
   test('should have a CdkRepo', () => {
     expect(cosmosExtensionStack).toHaveResource('AWS::CodeCommit::Repository', { RepositoryName: 'app-test-cdk-repo' });
     toHaveResourceId(cosmosExtensionStack, 'CdkRepo');
+  });
+
+  test('should allow resourced to be created in portal', () => {
+    const app = new App();
+    const cosmosExtension = new CosmosExtensionStack(app, 'Test');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    new CnameRecord((cosmosExtension.portal.rootZone as any) as Construct, 'Test', {
+      zone: cosmosExtension.portal.rootZone,
+      recordName: 'test',
+      domainName: 'test',
+    });
+    const [cosmosExtensionStack] = synthesizeStacks(cosmosExtension);
+    expect(cosmosExtensionStack.template).toMatchSnapshot();
   });
 
   //TODO: Check if imports align

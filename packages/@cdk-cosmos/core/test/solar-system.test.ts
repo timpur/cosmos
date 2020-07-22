@@ -1,6 +1,8 @@
 import '@aws-cdk/assert/jest';
-import { App } from '@aws-cdk/core';
+import { App, Construct } from '@aws-cdk/core';
 import { synthesizeStacks } from '../../../../src/test';
+import { CfnRoute } from '@aws-cdk/aws-ec2';
+import { ARecord, RecordTarget, CnameRecord } from '@aws-cdk/aws-route53';
 import {
   CosmosCoreStack,
   CosmosExtensionStack,
@@ -9,7 +11,7 @@ import {
   SolarSystemCoreStack,
   SolarSystemExtensionStack,
 } from '../src';
-import { CfnRoute } from '@aws-cdk/aws-ec2';
+import { SolarSystemCoreImport } from '../src/solar-system';
 
 const app = new App();
 const env = { account: 'account', region: 'region' };
@@ -25,6 +27,11 @@ const solarSystem2 = new SolarSystemCoreStack(galaxy2, 'Sys2', { env: env2 });
 const cosmosExtension = new CosmosExtensionStack(app, 'Test', { env });
 const galaxyExtension = new GalaxyExtensionStack(cosmosExtension, 'Gal', { env });
 const solarSystemExtension = new SolarSystemExtensionStack(galaxyExtension, 'Sys', { env });
+// Test Resources for extension
+new ARecord(solarSystemExtension, 'test', {
+  zone: solarSystemExtension.portal.zone,
+  target: RecordTarget.fromIpAddresses('1.1.1.1'),
+});
 
 const [
   galaxyStack,
@@ -84,7 +91,7 @@ describe('Solar-System', () => {
     }).toThrowError('NetworkBuilder not found, please define cidr range here (SolarSystem: Test) or Galaxy or Cosmos.');
   });
 
-  test('should have cird range', () => {
+  test('should have cidr range', () => {
     let app = new App();
     let cosmos = new CosmosCoreStack(app, 'Test', { tld: 'com', cidr: '10.0.0.0/22' });
     let galaxy = new GalaxyCoreStack(cosmos, 'Test');
@@ -171,6 +178,42 @@ describe('SolarSystem Extension', () => {
 
     const [stack] = synthesizeStacks(sys);
     expect(stack.template).toMatchSnapshot();
+  });
+
+  test('should be able to target the same SolarSystem from multiple Stacks', () => {
+    const app = new App();
+    const cosmos = new CosmosExtensionStack(app, 'Test', { env });
+    const galaxy = new GalaxyExtensionStack(cosmos, 'Test');
+    const portal = new SolarSystemCoreImport(galaxy.portal, 'Test', { galaxy: galaxy.portal });
+    const sys = new SolarSystemExtensionStack(galaxy, 'Test', { portal });
+    const sys2 = new SolarSystemExtensionStack(galaxy, 'Test2', { portal });
+    new ARecord(sys, 'Test', {
+      zone: sys.portal.zone,
+      target: RecordTarget.fromIpAddresses('1.1.1.1'),
+    });
+    new ARecord(sys2, 'Test', {
+      zone: sys2.portal.zone,
+      target: RecordTarget.fromIpAddresses('1.1.1.1'),
+    });
+
+    const [stack1, stack2] = synthesizeStacks(sys, sys2);
+    expect(stack1.template).toMatchSnapshot();
+    expect(stack2.template).toMatchSnapshot();
+  });
+
+  test('should allow resourced to be created in portal', () => {
+    const app = new App();
+    const cosmosExtension = new CosmosExtensionStack(app, 'Test', { env });
+    const galaxyExtension = new GalaxyExtensionStack(cosmosExtension, 'Gal', { env });
+    const solarSystemExtension = new SolarSystemExtensionStack(galaxyExtension, 'Sys', { env });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    new CnameRecord((solarSystemExtension.portal.zone as any) as Construct, 'Test', {
+      zone: solarSystemExtension.portal.zone,
+      recordName: 'test',
+      domainName: 'test',
+    });
+    const [solarSystemExtensionStack] = synthesizeStacks(solarSystemExtension);
+    expect(solarSystemExtensionStack.template).toMatchSnapshot();
   });
 
   test('should match snapshot', () => {
